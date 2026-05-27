@@ -113,6 +113,8 @@ npm run dev             # 启动开发服务器 → http://localhost:3000
 
 ## Docker 部署
 
+### 本机构建启动
+
 ```bash
 # 构建并启动
 docker compose up -d --build
@@ -124,15 +126,47 @@ docker compose logs -f
 docker compose down
 ```
 
-容器启动时自动执行 `prisma db push` 创建表结构。SQLite 数据通过 Docker volume 持久化，重建容器不会丢失数据。
+容器启动时自动执行 `prisma db push` 创建表结构，并在数据库为空时执行 `prisma/seed.ts` 填充演示数据。SQLite 数据通过 Docker volume 持久化，重建容器不会丢失数据；已有数据时不会重复 seed。
 
-访问 `http://localhost:3000`。
+访问 `http://localhost:3010`。
+
+### 发布到镜像仓库
+
+以 Docker Hub 为例，先登录并替换 `<namespace>` 为你的 Docker Hub 用户名或组织名：
+
+```bash
+docker login
+docker build -t <namespace>/fde-ai-work-items:latest .
+docker push <namespace>/fde-ai-work-items:latest
+```
+
+在任意已安装 Docker 的机器上拉取并启动：
+
+```bash
+docker volume create fde_ai_work_items_data
+docker run -d \
+  --name fde-ai-work-items \
+  --restart unless-stopped \
+  -p 3010:3000 \
+  -e DATABASE_URL=file:/app/prisma/data/dev.db \
+  -e SEED_ON_EMPTY=true \
+  -v fde_ai_work_items_data:/app/prisma/data \
+  <namespace>/fde-ai-work-items:latest
+```
+
+如果使用 GitHub Container Registry，可将镜像名换成 `ghcr.io/<owner>/fde-ai-work-items:latest`，登录、构建、推送命令分别替换为：
+
+```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+docker build -t ghcr.io/<owner>/fde-ai-work-items:latest .
+docker push ghcr.io/<owner>/fde-ai-work-items:latest
+```
 
 ### 镜像结构
 
 | 阶段      | 说明                                                        |
 | --------- | ----------------------------------------------------------- |
-| `deps`    | 安装生产依赖                                                |
+| `deps`    | 安装构建所需依赖并生成 Prisma Client                        |
 | `builder` | Prisma Client 生成 + Next.js standalone 构建                |
 | `runner`  | Alpine + Node.js，复制构建产物，entrypoint 自动初始化数据库 |
 

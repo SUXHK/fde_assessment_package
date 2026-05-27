@@ -1,15 +1,19 @@
 # Multi-stage Docker build for Next.js 16 + Prisma + SQLite
+ARG NODE_IMAGE=node:22-alpine
 
 # ---- Stage 1: Install dependencies ----
-FROM node:22-alpine AS deps
-RUN apk add --no-cache libc6-compat
+FROM ${NODE_IMAGE} AS deps
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY prisma/schema.prisma ./prisma/schema.prisma
+ENV DATABASE_URL="file:./dev.db"
+RUN npm ci
 
 # ---- Stage 2: Build application ----
-FROM node:22-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -23,8 +27,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # ---- Stage 3: Production runner ----
-FROM node:22-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -39,11 +44,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Copy Prisma schema + client + CLI for runtime db push
+# Copy dependencies and Prisma schema for runtime db push
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy entrypoint
 COPY entrypoint.sh ./entrypoint.sh
