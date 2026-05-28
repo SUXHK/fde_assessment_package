@@ -15,6 +15,8 @@ model WorkItem {
   priority           String
   status             String
   assignee           String
+  creatorId          String?
+  creatorName        String?
   tags               String                  @default("[]")
   riskLevel          String                  @default("MEDIUM")
   acceptanceCriteria String                  @default("[]")
@@ -29,6 +31,28 @@ model WorkItem {
   @@index([assignee])
 }
 
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([email])
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+}
 model Tag {
   id        String   @id @default(cuid())
   name      String   @unique

@@ -8,7 +8,7 @@
 
 ---
 
-<p align="center" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+<p align="center">
   <img src="screenshot/screenshot_2026_5_27%2017-31-31.png" alt="工作项看板预览" width="640" />
   <img src="screenshot/screenshot_2026_5_27%2017-34-40.png" alt="工作项看板预览" width="640" />
 </p>
@@ -80,8 +80,13 @@
 | 图标     | Lucide React              | SVG图标库             |
 | 单元测试 | Vitest                    | 状态机单元测试        |
 | E2E 测试 | Playwright                | E2E 浏览器自动化测试  |
+| 部署     | Docker                    | 部署容器              |
 
 ---
+
+### 选型理由
+
+Next.js 16 App Router 提供了页面和 API Route 的全栈一体化能力，无需额外搭建后端服务。TypeScript strict 模式确保全量类型安全。TailwindCSS 4 + shadcn/ui 的组合兼顾了原子化 CSS 的灵活性和高质量组件的开箱即用——相比 Ant Design 等重量级组件库更轻量，相比纯 CSS/SCSS 避免了样式分散和命名冲突，shadcn 的 copy-paste 模式也让组件定制成本极低。Motion 为看板交互提供了声明式动效。SQLite + Prisma 实现零配置本地持久化，Prisma 的类型安全查询 API 大幅降低运行时错误。Zod 的 Schema-即-类型模式让前后端校验共享同一份定义。Playwright 提供真实浏览器环境下的 E2E 测试能力。
 
 ## 快速开始
 
@@ -89,7 +94,7 @@
 npm install
 npm run db:generate
 npm run db:reset        # 重置 SQLite + 填充 24 条种子数据
-npm run dev             # 启动开发服务器 → http://localhost:3000
+npm run dev             # 启动开发服务器 → http://localhost:3010
 ```
 
 ### 可用命令
@@ -113,8 +118,6 @@ npm run dev             # 启动开发服务器 → http://localhost:3000
 
 ## Docker 部署
 
-### 本机构建启动
-
 ```bash
 # 构建并启动
 docker compose up -d --build
@@ -126,47 +129,15 @@ docker compose logs -f
 docker compose down
 ```
 
-容器启动时自动执行 `prisma db push` 创建表结构，并在数据库为空时执行 `prisma/seed.ts` 填充演示数据。SQLite 数据通过 Docker volume 持久化，重建容器不会丢失数据；已有数据时不会重复 seed。
+容器启动时自动执行 `prisma db push` 创建表结构。SQLite 数据通过 Docker volume 持久化，重建容器不会丢失数据。
 
 访问 `http://localhost:3010`。
-
-### 发布到镜像仓库
-
-以 Docker Hub 为例，先登录并替换 `<namespace>` 为你的 Docker Hub 用户名或组织名：
-
-```bash
-docker login
-docker build -t <namespace>/fde-ai-work-items:latest .
-docker push <namespace>/fde-ai-work-items:latest
-```
-
-在任意已安装 Docker 的机器上拉取并启动：
-
-```bash
-docker volume create fde_ai_work_items_data
-docker run -d \
-  --name fde-ai-work-items \
-  --restart unless-stopped \
-  -p 3010:3000 \
-  -e DATABASE_URL=file:/app/prisma/data/dev.db \
-  -e SEED_ON_EMPTY=true \
-  -v fde_ai_work_items_data:/app/prisma/data \
-  <namespace>/fde-ai-work-items:latest
-```
-
-如果使用 GitHub Container Registry，可将镜像名换成 `ghcr.io/<owner>/fde-ai-work-items:latest`，登录、构建、推送命令分别替换为：
-
-```bash
-echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
-docker build -t ghcr.io/<owner>/fde-ai-work-items:latest .
-docker push ghcr.io/<owner>/fde-ai-work-items:latest
-```
 
 ### 镜像结构
 
 | 阶段      | 说明                                                        |
 | --------- | ----------------------------------------------------------- |
-| `deps`    | 安装构建所需依赖并生成 Prisma Client                        |
+| `deps`    | 安装生产依赖                                                |
 | `builder` | Prisma Client 生成 + Next.js standalone 构建                |
 | `runner`  | Alpine + Node.js，复制构建产物，entrypoint 自动初始化数据库 |
 
@@ -260,23 +231,15 @@ npm run test:e2e:auto
 
 ## 项目文档
 
-完整设计文档和过程记录见 [`summary-report/`](summary-report/)：
+完整设计文档和过程记录：
 
-| 文档                                                              | 说明                                                    |
-| ----------------------------------------------------------------- | ------------------------------------------------------- |
-| [`api-design-proposal.md`](summary-report/api-design-proposal.md) | API 设计说明（15 个接口、输入/输出结构、错误码设计）    |
-| [`ai-usage.md`](summary-report/ai-usage.md)                       | AI 使用说明（8 个 Skills、7 阶段参与、人工修正清单）    |
-| [`process.md`](summary-report/process.md)                         | 过程记录（需求理解、任务拆解、技术方案、遇到的问题）    |
-| [`test-plan.md`](summary-report/test-plan.md)                     | 测试说明（28 个用例覆盖矩阵、业务规则验证、未覆盖风险） |
-| [`TEST-REPORT.md`](summary-report/TEST-REPORT.md)                 | 测试执行报告                                            |
-
----
-
-## 本机环境
-
-Node.js ===> v20.19.5
-
-pnpm ===> v10.19.0
+| 文档                                               | 说明                                                    |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| [`api-design-proposal.md`](api-design-proposal.md) | API 设计说明（15 个接口、输入/输出结构、错误码设计）    |
+| [`ai-usage.md`](ai-usage.md)                       | AI 使用说明（8 个 Skills、7 阶段参与、人工修正清单）    |
+| [`process.md`](process.md)                         | 过程记录（需求理解、任务拆解、技术方案、遇到的问题）    |
+| [`test-plan.md`](test-plan.md)                     | 测试说明（28 个用例覆盖矩阵、业务规则验证、未覆盖风险） |
+| [`TEST-REPORT.md`](summary-report/TEST-REPORT.md)  | 测试执行报告                                            |
 
 ---
 
@@ -288,11 +251,11 @@ pnpm ===> v10.19.0
 
 ### 加分项实现
 
-拖拽看板、搜索筛选、表单校验、响应式布局、暗色模式、组件测试（Vitest）、E2E 测试（Playwright）、API 类型定义、错误边界、后台日志终端、可替换 AI Service 封装、完整后端服务（Prisma + SQLite）、Docker 部署均已实现。
+拖拽看板、搜索筛选、表单校验、响应式布局、暗色模式、登录认证（注册/验证码/登录/JWT/路由守卫/用户菜单）、组件测试（Vitest）、E2E 测试（Playwright）、API 类型定义、错误边界、后台日志终端、可替换 AI Service 封装、完整后端服务（Prisma + SQLite）、Docker 部署均已实现。
 
 ### 技术取舍
 
-Mock AI Service 而非真实 LLM 是时间约束下的务实选择。lib/ai-service.ts 的单一函数签名确保了替换成本极低：改一个文件、调用 OpenAI-compatible API 即可。未做登录认证和 WebSocket 协作：前者是外围功能，后者在单用户演示场景无必要。前端状态管理采用 useState 而非 React Query，因为变更操作返回完整 WorkItemDTO 使得 upsertItem() 模式比缓存失效更直接。
+Mock AI Service 而非真实 LLM 是时间约束下的务实选择。lib/ai-service.ts 的单一函数签名确保了替换成本极低：改一个文件、调用 OpenAI-compatible API 即可。已实现完整的注册/登录/验证码/JWT/路由守卫认证体系，中间件采用 cookie 存在性检查策略以兼容 Edge Runtime。未做 WebSocket 协作：单用户演示场景无必要。前端状态管理采用 useState 而非 React Query，因为变更操作返回完整 WorkItemDTO 使得 upsertItem() 模式比缓存失效更直接。
 
 ### 风险
 
@@ -301,7 +264,7 @@ Seed 数据仅 24 条，未验证百条以上的列表渲染性能和 API 响应
 ### 后续优化方向
 
 - 接入真实 LLM（OpenAI-compatible）
-- 登录认证和权限控制
+- 权限控制（角色与访问级别）
 - URL 同步筛选条件
 - 负责人维度视图
 - 增量列表更新（摒弃全量替换）

@@ -1,20 +1,20 @@
-import type { Metadata } from "next"
-import { Toaster } from "@/components/ui/sonner"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import "./globals.css"
+import type { Metadata } from "next";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "AI 辅助工作项看板",
-    description: "Next.js + Prisma SQLite implementation for FDE assessment",
-    icons: "/ico.svg",
-}
+  title: "AI 辅助工作项看板",
+  description: "Next.js + Prisma SQLite implementation for FDE assessment",
+  icons: "/favicon.ico",
+};
 
 export default function RootLayout({
-    children,
+  children
 }: Readonly<{
-    children: React.ReactNode
+  children: React.ReactNode;
 }>) {
-    const themeScript = `
+  const themeScript = `
     (() => {
       try {
         const mode = localStorage.getItem("fde-theme") || "system";
@@ -27,19 +27,19 @@ export default function RootLayout({
         document.documentElement.dataset.theme = "system";
       }
     })();
-  `
+  `;
 
-    return (
-        <html lang="zh-CN" suppressHydrationWarning>
-            <head>
-                <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-            </head>
-            <body>
-                <TooltipProvider>
-                    {children}
-                    <Toaster richColors closeButton position="bottom-right" />
-                </TooltipProvider>
-            </body>
-        </html>
-    )
+  return (
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body>
+        <TooltipProvider>
+          {children}
+          <Toaster richColors closeButton position="bottom-right" />
+        </TooltipProvider>
+      </body>
+    </html>
+  );
 }
